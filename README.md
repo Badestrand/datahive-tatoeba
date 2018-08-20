@@ -3,7 +3,7 @@
 
 This is an unofficial REST API for the [Tatoeba project](https://tatoeba.org/). Tatoeba is a large database of sentences and translations, founded by Trang Ho in 2006. Its content is ever-growing and results from the voluntary contributions of thousands of members.
 
-This API also contains the data itself and is hosted by [datahive.one](https://datahive.one/) free for use but can just as well be self-hosted. Tatoebas data is licensed under the [Attribution 2.0 Generic (CC BY 2.0)](https://creativecommons.org/licenses/by/2.0/).
+This API does not contain the data itself (download from [here](https://tatoeba.org/eng/downloads)) and is hosted by [datahive.one](https://datahive.one/) free for use but can just as well be self-hosted. Tatoebas data is licensed under the [Attribution 2.0 Generic (CC BY 2.0)](https://creativecommons.org/licenses/by/2.0/).
 
 The routes, their parameters and result layouts are probably not completely stable as this is the first draft of the API. Feel free to contribute and open tickets.
 
@@ -16,7 +16,7 @@ Next enhancements:
 # API
 
 ## Authentication
-TODO
+If the `api.auth.validator` field in the configuration is specified then the API will require a http basic authentication header that gets validated with a post request to that `api.auth.validator` uri.
 
 ## Error handling
 Errors are indicated by HTTP status codes and the response JSON contains the `error` field. Example:
@@ -147,7 +147,7 @@ To set up the database:
 	CREATE USER 'tatoeba'@'localhost' IDENTIFIED BY 'tatoeba';
 	GRANT ALL ON tatoeba.* TO 'tatoeba'@'localhost';
 
-Import the database tables by
+Import the database tables from [here](https://tatoeba.org/eng/downloads) by
 
 	mysqlimport --fields-terminated-by='\t' --local -u root --default-character-set=utf8 tatoeba sentences.csv
 	mysqlimport --fields-terminated-by='\t' --local -u root --default-character-set=utf8 tatoeba link.csv

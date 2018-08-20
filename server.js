@@ -1,14 +1,14 @@
 'use strict'
 
-const cookieParser = require('cookie-parser')
+const basicAuth = require('basic-auth')
 const express = require('express')
 const fs = require('fs')
 const path = require('path')
+const request = require('request')
 
 const config = require('./helpers/config')
 const database = require('./helpers/database')
 const utils = require('./helpers/utils')
-
 
 
 
@@ -39,11 +39,7 @@ async function extendSentences(rows, query) {
 
 
 
-
 const server = express()
-
-server.use(cookieParser())
-
 
 
 
@@ -53,7 +49,6 @@ if (config.debug) {
 		console.log(req.method, req.url, req.body? JSON.stringify(req.body) : '')
 		next()
 	})
-
 	// Pretty print JSON
 	server.use((req, res, next) => {
 		res.json = (obj) => {
@@ -61,6 +56,38 @@ if (config.debug) {
 			res.send(JSON.stringify(obj, null, 4))
 		}
 		next()
+	})
+}
+
+
+// Authentication
+if (config.api.auth) {
+	server.use((req, res, next) => {
+		const user = basicAuth(req)
+		if (!user || !user.name || !user.pass) {
+			res.set('WWW-Authenticate', 'Basic realm=Authorization Required')
+			res.sendStatus(401)
+			return
+		}
+		if (config.api.auth.validator) {
+			request({
+				method: 'POST',
+				uri: config.api.auth.validator,
+				form: {
+					username: user.name,
+					password: user.pass
+				}
+			}, (error, response, body) => {
+				if (response.statusCode !== 200) {
+					res.set('WWW-Authenticate', 'Basic realm=Authorization Required')
+					res.sendStatus(401)
+					return
+				}
+				next()
+			})
+		} else {
+			next()
+		}
 	})
 }
 
@@ -77,12 +104,6 @@ const apiRoute = (fn) => (req, res) => {
 
 
 // -- Routes --
-function useQueryParam(param, defaultValue, prepareFunc) {
-	if (param === undefined) {
-		return defaultValue
-	}
-	return prepareFunc(param)
-}
 
 // /sentences
 //   [lang=eng]
@@ -93,9 +114,9 @@ function useQueryParam(param, defaultValue, prepareFunc) {
 //   [offset=1000]
 //   [limit=500]
 server.get('/sentences', apiRoute(async(req, res) => {
-	const offset = useQueryParam(req.query.offset, 0, s=>Math.max(0, parseInt(s)))
+	const offset = req.query.offset===undefined? 0 : s=>Math.max(0, parseInt(s))
 	const maxLimit = req.query.links!==undefined? 250 : 1000
-	const limit = useQueryParam(req.query.limit, maxLimit, s=>Math.min(maxLimit, Math.max(0, parseInt(s))))
+	const limit = req.query.limit==undefined? maxLimit : s=>Math.min(maxLimit, Math.max(0, parseInt(s)))
 
 	let r
 	if (req.query.tag === undefined) {

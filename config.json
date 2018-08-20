@@ -1,7 +1,10 @@
 {
 	"debug": true,
 	"api": {
-		"port": 8232
+		"port": 8232,
+		"auth": {
+			"validator": "http://localhost:8233/auth"
+		}
 	},
 	"mysql": {
 		"host": "localhost",
