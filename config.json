@@ -1,0 +1,19 @@
+{
+	"debug": true,
+	"api": {
+		"port": 8232
+	},
+	"mysql": {
+		"host": "localhost",
+		"port": 3306,
+		"user": "tatoeba",
+		"password": "tatoeba",
+		"schema": "tatoeba"
+	},
+	"logging": {
+		"mysql": {
+			"selects": true,
+			"updates": true
+		}
+	}
+}
