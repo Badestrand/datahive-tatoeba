@@ -4,6 +4,15 @@
 		"port": 8232,
 		"auth": {
 			"validator": "http://localhost:8233/auth"
+		},
+		"routes": {
+			"GET /sentences": {
+				"maxLimitWithLinks": 250,
+				"maxLimitWithoutLinks": 1000
+			},
+			"GET /sentences/search": {
+				"maxLimit": 100
+			}
 		}
 	},
 	"mysql": {
@@ -12,6 +21,10 @@
 		"user": "tatoeba",
 		"password": "tatoeba",
 		"schema": "tatoeba"
+	},
+	"sphinx": {
+		"host": "127.0.0.1",
+		"port": 9310
 	},
 	"logging": {
 		"mysql": {

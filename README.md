@@ -8,7 +8,6 @@ This API does not contain the data itself (download from [here](https://tatoeba.
 The routes, their parameters and result layouts are probably not completely stable as this is the first draft of the API. Feel free to contribute and open tickets.
 
 Next enhancements:
- - Include a full text search
  - Include "Sentences with audio" from https://tatoeba.org/eng/downloads
  - Include User Lists from https://tatoeba.org/eng/downloads
  - Include Extended Sentence Info (username, date added, date modified) from https://tatoeba.org/eng/downloads
@@ -18,7 +17,7 @@ Next enhancements:
 ## Authentication
 If the `api.auth.validator` field in the configuration is specified then the API will require a http basic authentication header that gets validated with a post request to that `api.auth.validator` uri.
 
-## Error handling
+## Error indication
 Errors are indicated by HTTP status codes and the response JSON contains the `error` field. Example:
 ```
 404 Not Found
@@ -38,6 +37,7 @@ Returns an array with each sentence having the form `{id, lang, text}`. The `lan
 You can enumerate the whole database by increasing the `offset` parameter and stopping when the returned number of sentences is less than the specified limit (given you specified a limit less or equal the maximum).
 
 **Route**: `GET /sentences`
+
 **Parameters**:
  - `lang`: (optional) A three character [language code](https://en.wikipedia.org/wiki/ISO_639-3). If specified, only sentences from that language get returned
  - `lang2`: (optional) A three character [language code](https://en.wikipedia.org/wiki/ISO_639-3). If this and `lang` are specified,  only sentences get returned that have a linked sentence in `lang2` and fields `id2, lang2, text2` are added
@@ -73,6 +73,7 @@ You can enumerate the whole database by increasing the `offset` parameter and st
 Get sentences by id.
 
 **Route**: `GET /sentences/:id` (give a single id or a comma separated list)
+
 **Parameters**: 
  - `links`: (optional) Each entry will contain a `links` array with all linked sentence objects with fields  `{id, lang, text}`
  - `tags`: (optional) Each entry will contain a `tags` array with the associated tag names
@@ -91,10 +92,42 @@ Get sentences by id.
 		"text": "What's that?"
 	}]
 
+
+### Sentence search
+Performs a fulltext search accross all sentences.
+
+**Route**: `GET /sentences/search`
+
+**Parameters**:
+ - `q`: The search string
+ - `lang`: (optional) A three character [language code](https://en.wikipedia.org/wiki/ISO_639-3). If specified, only sentences from that language get returned
+ - `links`: (optional) Each entry will contain a `links` array with all linked sentence objects with fields  `{id, lang, text}`
+ - `tags`: (optional) Each entry will contain a `tags` array with the associated tag names
+ - `offset`: (optional) For paging, the starting entry
+ - `limit`: (optional) For paging, the amount of entries. Maximum of 1000 and if the `links` parameter is specified, a maximum of 250
+
+**Example**:
+`GET /sentences/search?q=home&offset=1&limit=2`
+=>
+
+    [{
+        "id": 5705234,
+        "lang": "eng",
+        "text": "I do come home at Christmas. We all do, or we all should. We all come home, or ought to come home, for a short holiday — the longer, the better — from the great boarding-school, where we are forever working at our arithmetical slates, to take, and give a rest."
+    }, {
+        "id": 36723,
+        "lang": "eng",
+        "text": "Be it ever so humble, home is home."
+    }]
+ 
+
+
+
 ### List all tags
 Returns a simple text list of tags used in the dataset.
 
 **Route**: `GET /tags`
+
 **Parameters**: -
 
 **Example**:
@@ -107,6 +140,7 @@ Returns a simple text list of tags used in the dataset.
 Returns the license of Tatoeba. This is a static result which never changes.
 
 **Route**: `GET /license`
+
 **Parameters**: -
 
 **Example**: 
@@ -126,11 +160,13 @@ This API bases on Node.js and MySQL, so you have to have those installed.
 To set up the database:
 
 	CREATE SCHEMA tatoeba CHARACTER SET utf8 COLLATE utf8_general_ci;
+
 	CREATE TABLE tatoeba.links (
 		`sentence_id_1` int(11) NOT NULL,
 		`sentence_id_2` int(11) NOT NULL,
 		KEY `links_sentence_id_1` (`sentence_id_1`)
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 	CREATE TABLE tatoeba.sentences (
 		`id` int(11) NOT NULL,
 		`lang` char(3) NOT NULL,
@@ -138,14 +174,19 @@ To set up the database:
 		PRIMARY KEY (`id`),
 		KEY `sentences_lang` (`lang`)
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 	CREATE TABLE tatoeba.tags (
 		`sentence_id` int(11) NOT NULL,
 		`tag` varchar(45) NOT NULL,
 		KEY `tags_sentence_id` (`sentence_id`),
 		KEY `tags_tag` (`tag`)
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 	CREATE USER 'tatoeba'@'localhost' IDENTIFIED BY 'tatoeba';
+	CREATE USER 'sphinxsearch'@'localhost' IDENTIFIED BY 'tatoeba';
+
 	GRANT ALL ON tatoeba.* TO 'tatoeba'@'localhost';
+	GRANT SELECT ON tatoeba.sentences TO 'sphinxsearch'@'localhost';
 
 Import the database tables from [here](https://tatoeba.org/eng/downloads) by
 
@@ -154,3 +195,14 @@ Import the database tables from [here](https://tatoeba.org/eng/downloads) by
 	mysqlimport --fields-terminated-by='\t' --local -u root --default-character-set=utf8 tatoeba tags.csv
 
 Then, adjust the `/config.json` file to your needs.
+
+
+Sphinx fulltext search commands:
+
+	Create index: `indexer --all --config config/sphinx.conf`
+
+	Rotate Index: `indexer --all --rotate --config config/sphinx.conf`
+
+	Start Sphinx: `searchd --config config/sphinx.conf`
+
+	Stop Sphinx: `searchd --stop --config config/sphinx.conf`

@@ -5,8 +5,8 @@ const fs = require('fs')
 
 
 const configPaths = [
-	__dirname+'/../config.json',
-	__dirname+'/../config.platform.json'
+	__dirname+'/../config/config.json',
+	__dirname+'/../config/config.platform.json'
 ]
 
 
