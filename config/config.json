@@ -2,7 +2,7 @@
 	"debug": true,
 	"api": {
 		"port": 8232,
-		"auth": {
+		"_auth": {
 			"validator": "http://localhost:8233/auth"
 		},
 		"routes": {
