@@ -116,7 +116,7 @@ const apiRoute = (fn) => (req, res) => {
 //   [offset=1000]
 //   [limit=500]
 server.get('/sentences', apiRoute(async(req, res) => {
-	const routeOptions = config.api.routes['GET /sentences'].maxLimit
+	const routeOptions = config.api.routes['GET /sentences']
 	const offset = req.query.offset===undefined? 0 : Math.max(0, parseInt(req.query.offset))
 	const maxLimit = req.query.links!==undefined? routeOptions.maxLimitWithLinks : routeOptions.maxLimitWithoutLinks
 	const limit = req.query.limit==undefined? maxLimit : Math.min(maxLimit, Math.max(0, parseInt(req.query.limit)))
@@ -153,6 +153,7 @@ server.get('/sentences', apiRoute(async(req, res) => {
 
 // GET /sentences/search
 //   [lang=eng]
+//   [lang2=tha]  TODO
 //   [links]
 //   [tags]
 //   [offset=1000]
@@ -166,7 +167,12 @@ server.get('/sentences/search', apiRoute(async(req, res) => {
 	if (req.query.lang !== undefined) {
 		r = await sphinx.query('SELECT * FROM sentences WHERE lang=? AND MATCH(?) LIMIT ?,?', [req.query.lang, req.query.q, offset, limit])
 	} else {
-		r = await sphinx.query('SELECT * FROM sentences WHERE MATCH(?) LIMIT ?,?', [req.query.q, offset, limit])
+		if (req.query.lang2 === undefined) {
+			r = await sphinx.query('SELECT * FROM sentences WHERE MATCH(?) LIMIT ?,?', [req.query.q, offset, limit])
+		} else {
+			// TODO
+			r = await sphinx.query('SELECT * FROM sentences WHERE MATCH(?) LIMIT ?,?', [req.query.q, offset, limit])
+		}
 	}
 	await extendSentences(r, req.query)
 	res.json(r)
