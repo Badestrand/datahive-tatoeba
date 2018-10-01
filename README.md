@@ -155,44 +155,42 @@ Returns the license of Tatoeba. This is a static result which never changes.
 	}
 
 # Setup
+
 This API bases on Node.js and MySQL, so you have to have those installed.
 
-To set up the database:
+	# install necessities
+	sudo apt-get install -y nodejs npm mysql-server mysql-client nginx sphinxsearch
+	npm install pm2 -g
 
-	CREATE SCHEMA tatoeba CHARACTER SET utf8 COLLATE utf8_general_ci;
+	# get repository
+	mkdir -p /var/www/datahive/tatoeba
+	cd /var/www/datahive/tatoeba
+	git clone https://github.com/Badestrand/datahive-tatoeba.git .
+	npm i
+	mysql < config/setup-database.sql
 
-	CREATE TABLE tatoeba.links (
-		`sentence_id_1` int(11) NOT NULL,
-		`sentence_id_2` int(11) NOT NULL,
-		KEY `links_sentence_id_1` (`sentence_id_1`)
-	) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+	# import Tatoeba database from https://tatoeba.org/eng/downloads
+	cd /tmp
+	wget http://downloads.tatoeba.org/exports/sentences.tar.bz2 http://downloads.tatoeba.org/exports/links.tar.bz2 http://downloads.tatoeba.org/exports/tags.tar.bz2
+	tar -xvjf sentences.tar.bz2
+	tar -xvjf links.tar.bz2
+	tar -xvjf tags.tar.bz2
+	rm sentences.tar.bz2 links.tar.bz2 tags.tar.bz2
+	mysqlimport --fields-terminated-by='\t' --local -u tatoeba -p --default-character-set=utf8 tatoeba /tmp/sentences.csv
+	mysqlimport --fields-terminated-by='\t' --local -u tatoeba -p --default-character-set=utf8 tatoeba /tmp/links.csv
+	mysqlimport --fields-terminated-by='\t' --local -u tatoeba -p --default-character-set=utf8 tatoeba /tmp/tags.csv
 
-	CREATE TABLE tatoeba.sentences (
-		`id` int(11) NOT NULL,
-		`lang` char(3) NOT NULL,
-		`text` text NOT NULL,
-		PRIMARY KEY (`id`),
-		KEY `sentences_lang` (`lang`)
-	) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+	# start sphinx search
+	cd /var/www/datahive/tatoeba
+	mkdir -p _platform/sphinxdata
+	indexer --all --config config/sphinx.conf
 
-	CREATE TABLE tatoeba.tags (
-		`sentence_id` int(11) NOT NULL,
-		`tag` varchar(45) NOT NULL,
-		KEY `tags_sentence_id` (`sentence_id`),
-		KEY `tags_tag` (`tag`)
-	) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+	# start the server
+	pm2 start server.js --name tatoeba --watch
+	pm2 save
 
-	CREATE USER 'tatoeba'@'localhost' IDENTIFIED BY 'tatoeba';
-	CREATE USER 'sphinxsearch'@'localhost' IDENTIFIED BY 'tatoeba';
+	# let pm2 process and sphinx survive a restart
 
-	GRANT ALL ON tatoeba.* TO 'tatoeba'@'localhost';
-	GRANT SELECT ON tatoeba.sentences TO 'sphinxsearch'@'localhost';
-
-Import the database tables from [here](https://tatoeba.org/eng/downloads) by
-
-	mysqlimport --fields-terminated-by='\t' --local -u root --default-character-set=utf8 tatoeba sentences.csv
-	mysqlimport --fields-terminated-by='\t' --local -u root --default-character-set=utf8 tatoeba link.csv
-	mysqlimport --fields-terminated-by='\t' --local -u root --default-character-set=utf8 tatoeba tags.csv
 
 Then, adjust the `/config.json` file to your needs.
 
